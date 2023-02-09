@@ -89,10 +89,30 @@ Once you are done setting up the project, you can now start working with the MET
 ## Setup in R
 
 1. Load the `data.table` (and the `dtplyr` and `dplyr` packages if you plan to work with those).
+```{r}
+library(data.table)
+library(dtplyr)
+library(dplyr)
+library(ggplot2)
+library(leaflet)
+```
+
 
 2. Load the met data from https://github.com/JSC370/jsc370-2023/blob/main/labs/lab03/met_all.gz or  (Use https://raw.githubusercontent.com/JSC370/jsc370-2023/main/labs/lab03/met_all.gz to download programmatically), and also the station data. For the latter, you can use the code we used during lecture to pre-process the stations data:
 
-```{r stations-data, eval = FALSE}
+```{r}
+download.file(
+  url = "https://raw.githubusercontent.com/JSC370/jsc370-2023/main/labs/lab03/met_all.gz",
+  destfile = "met_all.gz",
+  method = "libcurl",
+  timeout = 60
+  )
+met <- data.table::fread("met_all.gz")
+
+```
+
+
+```{r stations-data}
 # Download the data
 stations <- fread("ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv")
 stations[, USAF := as.integer(USAF)]
@@ -115,13 +135,90 @@ stations <- stations[n == 1,][, n := NULL]
 
 3. Merge the data as we did during the lecture.
 
+```{r}
+met <- merge(
+  x = met,
+  y = stations,
+  all.x = TRUE, all.y = FALSE,
+  by.x = "USAFID", by.y = "USAF"
+)
+```
+
+
+```{r}
+# met <- left_join(met, stations, by = c("USAFID" = "USAF"))
+```
+```{r}
+met_lz <- lazy_dt(met, immutable = FALSE)
+```
+
 ## Question 1: Representative station for the US
 
 Across all weather stations, what is the median station in terms of temperature, wind speed, and atmospheric pressure? Look for the three weather stations that best represent continental US using the `quantile()` function. Do these three coincide?
 
 ```{r}
-
+met_avg_lz <- met_lz |>
+  group_by (USAFID) |>
+  summarise(
+    across(
+      c(temp, wind.sp, atm.press),
+      function(x) mean(x, na.rm = TRUE)
+    )
+  )
 ```
+
+
+```{r}
+# find medians of temp, wind.sp
+met_med_lz <- met_avg_lz |>
+  summarise(across(
+    2:4,
+    function(x) quantile(x, probs = .5, na.rm = TRUE)
+  ))
+met_med_lz
+```
+```{r}
+met_avg_lz |>
+  filter(temp == met_med_lz |> pull(temp) |
+         wind.sp == met_med_lz |> pull(wind.sp) |
+           atm.press == met_med_lz |> pull(atm.press))
+```
+```{r}
+#temperature
+temp_us_id <- met_avg_lz |>
+  mutate(temp_diff = abs(temp - met_med_lz |> pull(temp))) |>
+  arrange(temp_diff) |>
+  slice(1) |>
+  pull(USAFID)
+
+#wind speed
+wsp_us_id <- met_avg_lz |>
+  mutate(wsp_diff = abs(wind.sp - met_med_lz |> pull(wind.sp))) |>
+  arrange(wsp_diff) |>
+  slice(1) |>
+  pull(USAFID)
+
+#atm speed
+atm_us_id <- met_avg_lz |>
+  mutate(atm_diff = abs(atm.press - met_med_lz |> pull(atm.press))) |>
+  arrange(atm_diff) |>
+  slice(1) |>
+  pull(USAFID)
+```
+
+Thus, USAFID for the the three weather stations that best represent continental US are stations are 720458, 720929, and 722238.
+
+```{r}
+met_lz |>
+  select(USAFID, lon, lat) |>
+  distinct() |>
+  filter(USAFID %in% c(temp_us_id, wsp_us_id, atm_us_id))
+```
+I think these three do not coincide:
+The three representative stations have similar lon and lat, which should be close to each other,
+in other word, about the same place. This means that the place at around longtitude -(82.6~92.0) 
+and latitude (31.3~45.5) is the "mild" place representing continental US: neither too hot nor too cold, neither too windy nor not windy, and with median atmosphere pressure, everything's around the median, which can represent the "median" of continental US.
+
 
 Knit the document, commit your changes, and save it on GitHub. Don't forget to add `README.md` to the tree, the first time you render it.
 
@@ -130,9 +227,40 @@ Knit the document, commit your changes, and save it on GitHub. Don't forget to a
 Just like the previous question, you are asked to identify what is the most representative, the median, station per state. This time, instead of looking at one variable at a time, look at the euclidean distance. If multiple stations show in the median, select the one located at the lowest latitude.
 
 ```{r}
-
+udist <- function(pt1, pt2){
+  sqrt(sum((pt1-pt2)^2))
+}
+udist(c(1,1,1), c(3,3,3))
 ```
 
+
+```{r}
+met_med_lz_state <- met_lz |>
+  group_by(STATE) |>
+  summarise(across (
+    c(temp, wind.sp, atm.press),
+    function(x) quantile(x, probs = .5, na.rm = TRUE)
+  )) 
+left_join_result <- left_join(met_lz, met_med_lz_state, by = "STATE")
+met_med_lz_state <- as.data.frame(left_join_result)
+
+met_med_lz_state <- met_med_lz_state |>
+  mutate(
+    location_diff = udist(c(temp.x, wind.sp.x, atm.press.x), c(temp.y, wind.sp.y, atm.press.y))
+  )
+
+#instead of looking at one variable at a time, look at the euclidean distance. If multiple stations show in the median, select the one located at the lowest latitude.
+uid <- met_med_lz_state |>
+  group_by(STATE) |>
+  arrange(lat, location_diff) |>
+  slice_min(n = 1, order_by = lat) |>
+  pull(USAFID)
+uid_unique <- unique(uid)
+uid_unique
+```
+Thus, the most representative, the median, station per state are with USAFID 720381 723419 722728 722909 724625 725040 724093 722010 722166 725456 725786 724975 724320 724604 720353 720916 725060 725514 726064 720275 722006 720616 720717 726764 722191 720491 725533 726163
+ 724075 722725 720741 725030 724297 723759 720365 724080 722151 720120 726525 723240 722508 724754
+ 724106 726166 720254 726505 724125 722221.
 Knit the doc and save it on GitHub.
 
 ## Question 3: In the middle?

@@ -324,44 +324,7 @@ udist(c(1,1,1), c(3,3,3))
 
     ## [1] 3.464102
 
-``` r
-met_med_lz_state <- met_lz |>
-  group_by(STATE) |>
-  summarise(across (
-    c(temp, wind.sp, atm.press),
-    function(x) quantile(x, probs = .5, na.rm = TRUE)
-  )) 
-left_join_result <- left_join(met_lz, met_med_lz_state, by = "STATE")
-met_med_lz_state <- as.data.frame(left_join_result)
-
-met_med_lz_state <- met_med_lz_state |>
-  mutate(
-    location_diff = udist(c(temp.x, wind.sp.x, atm.press.x), c(temp.y, wind.sp.y, atm.press.y))
-  )
-
-#instead of looking at one variable at a time, look at the euclidean distance. If multiple stations show in the median, select the one located at the lowest latitude.
-uid <- met_med_lz_state |>
-  group_by(STATE) |>
-  arrange(lat, location_diff) |>
-  slice_min(n = 1, order_by = lat) |>
-  pull(USAFID)
-uid_unique <- unique(uid)
-uid_unique
-```
-
-    ##  [1] 720381 723419 722728 722909 724625 725040 724093 722010 722166 725456
-    ## [11] 725786 724975 724320 724604 720353 720916 725060 725514 726064 720275
-    ## [21] 722006 720616 720717 726764 722191 720491 725533 726163 724075 722725
-    ## [31] 720741 725030 724297 723759 720365 724080 722151 720120 726525 723240
-    ## [41] 722508 724754 724106 726166 720254 726505 724125 722221
-
-Thus, the most representative, the median, station per state are with
-USAFID 720381 723419 722728 722909 724625 725040 724093 722010 722166
-725456 725786 724975 724320 724604 720353 720916 725060 725514 726064
-720275 722006 720616 720717 726764 722191 720491 725533 726163 724075
-722725 720741 725030 724297 723759 720365 724080 722151 720120 726525
-723240 722508 724754 724106 726166 720254 726505 724125 722221. Knit the
-doc and save it on GitHub.
+Knit the doc and save it on GitHub.
 
 ## Question 3: In the middle?
 
