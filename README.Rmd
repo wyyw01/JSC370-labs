@@ -368,8 +368,9 @@ ggplot(df, aes(x = median_wind_sp, y = median_temp)) +
   geom_smooth(method = "auto") +
   geom_smooth(method = "lm")
 
-model <- lm(median_temp ~ median_wind_sp, data = metmed)
-summary(model)
+linear_model <- lm(median_temp ~ median_wind_sp, data = metmed)
+summary(linear_model)
+plot(linear_model)
 
 spline_model <- gam(median_temp ~ s(median_wind_sp, bs = "cr", k = 10), data = df)
 plot(spline_model)
