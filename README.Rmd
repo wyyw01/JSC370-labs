@@ -268,7 +268,18 @@ Knit the doc and save it on GitHub.
 For each state, identify what is the station that is closest to the mid-point of the state. Combining these with the stations you identified in the previous question, use `leaflet()` to visualize all ~100 points in the same figure, applying different colors for those identified in this question.
 
 ```{r}
+met_avg <- met_lz |>
+  group_by(STATE) |>
+  summarise(across(c(lat, lon),
+      function(x) mean(x,na.rm=TRUE))) 
+met_all <- met_avg |>
+  left_join(met_med_lz_state, by = "STATE") |> 
+  as.data.frame()
 
+met_all <- met_all %>% mutate(distance = udist(c(lat.x, lon.x), c(lat.y, lon.y))) |> group_by(STATE) |>  slice(which.min(distance))
+leaflet(result) |> addProviderTiles('OpenStreetMap')  |>
+  addCircleMarkers(lng = ~lon, lat = ~lat, fillColor = "pink", radius = 20, weight = 0 ) |>
+  addCircleMarkers(lng = ~met_all$lon.x, lat = ~met_all$lat.x, fillColor = "green", radius = 20, weight = 0)
 ```
 
 Knit the doc and save it on GitHub.
