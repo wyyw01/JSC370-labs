@@ -371,6 +371,7 @@ ggplot(df, aes(x = median_wind_sp, y = median_temp)) +
 model <- lm(median_temp ~ median_wind_sp, data = metmed)
 summary(model)
 
-gam_model <- gam(median_temp ~ s(median_wind_sp, bs = "cr", k = 10), data = df)
-plot(gam_model)
+spline_model <- gam(median_temp ~ s(median_wind_sp, bs = "cr", k = 10), data = df)
+plot(spline_model)
 ```
+The spline model interprets the data better since the data is not linear and there is not a consistent trend (I mean, keep increasing or keep decreasing), so the spline one is better since it fits the overall trend: flat->increase a little->decrease.
