@@ -276,7 +276,7 @@ met_all <- met_avg |>
   left_join(met_med_lz_state, by = "STATE") |> 
   as.data.frame()
 
-met_all <- met_all %>% mutate(distance = udist(c(lat.x, lon.x), c(lat.y, lon.y))) |> group_by(STATE) |>  slice(which.min(distance))
+met_all <- met_all |> mutate(distance = udist(c(lat.x, lon.x), c(lat.y, lon.y))) |> group_by(STATE) |>  slice(which.min(distance))
 leaflet(result) |> addProviderTiles('OpenStreetMap')  |>
   addCircleMarkers(lng = ~lon, lat = ~lat, fillColor = "pink", radius = 20, weight = 0 ) |>
   addCircleMarkers(lng = ~met_all$lon.x, lat = ~met_all$lat.x, fillColor = "green", radius = 20, weight = 0)
@@ -295,7 +295,7 @@ Start by computing the states' average temperature. Use that measurement to clas
 - High: temp >= 25
 
 ```{r}
-met_avg_lz <- met_avg_lz %>% 
+met_avg_lz <- met_avg_lz |>
   mutate(temp_level = ifelse(temp < 20, "Low",
                              ifelse(temp >= 20 & temp < 25, "Mid", "High")))
 
@@ -312,16 +312,16 @@ Once you are done with that, you can compute the following:
 All by the levels described before.
 
 ```{r}
-new_met <- met_avg_lz %>% 
-  group_by(temp_level) %>% 
+new_met <- met_avg_lz |> 
+  group_by(temp_level) |>
   summarize(n = n(),
             median_temp = median(temp, na.rm = TRUE),
             median_wind_sp = median(wind.sp, na.rm = TRUE),
             median_atm_press = median(atm.press, na.rm = TRUE))
 
 new_met <- as.data.frame(new_met)
-after_summarize <- met_avg_lz %>% 
-  group_by(temp_level) %>% 
+after_summarize <- met_avg_lz |> 
+  group_by(temp_level) |>
   summarize(n = n(),
             n_NA = sum(is.na(temp) | is.na(wind.sp) | is.na(atm.press)),
             n_stations = n_distinct(USAFID),
@@ -331,7 +331,7 @@ after_summarize <- met_avg_lz %>%
             median_wind_sp = quantile(wind.sp, 0.5, na.rm=T),
             mean_wind_sp = mean(wind.sp, na.rm = TRUE),
             median_atm_press = quantile(atm.press, 0.5, na.rm=T),
-            mean_atm_press = mean(atm.press, na.rm = TRUE)) %>%
+            mean_atm_press = mean(atm.press, na.rm = TRUE)) |>
   as.data.frame
 after_summarize
 ```
@@ -350,8 +350,8 @@ Let's practice running regression models with smooth functions on X. We need the
 ```{r}
 library(ggplot2)
 library(mgcv)
-metmed <- met_lz %>% 
-  group_by(USAFID) %>%
+metmed <- met_lz |> 
+  group_by(USAFID) |>
   summarise(
     STATE = first(STATE),
     lon = first(lon),
@@ -371,6 +371,6 @@ ggplot(df, aes(x = median_wind_sp, y = median_temp)) +
 model <- lm(median_temp ~ median_wind_sp, data = metmed)
 summary(model)
 
-model <- gam(median_temp ~ s(median_wind_sp, bs = "cr", k = 10), data = df)
-plot(model)
+gam_model <- gam(median_temp ~ s(median_wind_sp, bs = "cr", k = 10), data = df)
+plot(gam_model)
 ```
