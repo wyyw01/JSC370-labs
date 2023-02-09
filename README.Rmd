@@ -299,6 +299,19 @@ met_avg_lz <- met_avg_lz %>%
   mutate(temp_level = ifelse(temp < 20, "Low",
                              ifelse(temp >= 20 & temp < 25, "Mid", "High")))
 
+```
+
+Once you are done with that, you can compute the following:
+
+- Number of entries (records),
+- Number of NA entries,
+- Number of stations,
+- Number of states included, and
+- Mean temperature, wind-speed, and atmospheric pressure.
+
+All by the levels described before.
+
+```{r}
 new_met <- met_avg_lz %>% 
   group_by(temp_level) %>% 
   summarize(n = n(),
@@ -323,20 +336,6 @@ after_summarize <- met_avg_lz %>%
 after_summarize
 ```
 Please see the table.
-Once you are done with that, you can compute the following:
-
-- Number of entries (records),
-- Number of NA entries,
-- Number of stations,
-- Number of states included, and
-- Mean temperature, wind-speed, and atmospheric pressure.
-
-All by the levels described before.
-
-```{r}
-
-```
-
 Knit the document, commit your changes, and push them to GitHub. 
 
 
